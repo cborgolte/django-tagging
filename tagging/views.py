@@ -1,12 +1,15 @@
 """
 Tagging related views.
 """
+
+import types
 from django.http import Http404
 from django.utils.translation import ugettext as _
 from django.views.generic.list_detail import object_list
 
 from tagging.models import Tag, TaggedItem
 from tagging.utils import get_tag, get_queryset_and_model
+
 
 def tagged_object_list(request, queryset_or_model=None, tag=None,
         related_tags=False, related_tag_counts=True, **kwargs):
@@ -48,5 +51,39 @@ def tagged_object_list(request, queryset_or_model=None, tag=None,
     if related_tags:
         kwargs['extra_context']['related_tags'] = \
             Tag.objects.related_for_model(tag_instance, queryset_or_model,
+                                          counts=related_tag_counts)
+    return object_list(request, queryset, **kwargs)
+
+
+def itagged_object_list(request, queryset_or_model=None, tag=None,
+        related_tags=False, related_tag_counts=True, **kwargs):
+    """tagged_object_list with case insensitive search."""
+
+    if queryset_or_model is None:
+        try:
+            queryset_or_model = kwargs.pop('queryset_or_model')
+        except KeyError:
+            raise AttributeError(_('tagged_object_list must be called with a queryset or a model.'))
+
+    if tag is None:
+        try:
+            tag = kwargs.pop('tag')
+        except KeyError:
+            raise AttributeError(_('tagged_object_list must be called with a tag.'))
+
+    if isinstance(tag, (types.IntType, types.LongType)):
+        tag_instances = Tag.objects.filter(id=tag)
+    else:
+        tag_instances = Tag.objects.filter(name__iexact=tag)
+
+    if tag_instances is None:
+        raise Http404(_('No Tag found matching "%s".') % tag)
+    queryset = TaggedItem.objects.get_by_model(queryset_or_model, tag_instances)
+    if not kwargs.has_key('extra_context'):
+        kwargs['extra_context'] = {}
+    kwargs['extra_context']['tag'] = tag
+    if related_tags:
+        kwargs['extra_context']['related_tags'] = \
+            Tag.objects.related_for_model(tag_instances, queryset_or_model,
                                           counts=related_tag_counts)
     return object_list(request, queryset, **kwargs)
