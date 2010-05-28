@@ -800,6 +800,15 @@ perform filtering of the objects which are listed::
        return tagged_object_list(request, queryset, tag, paginate_by=25,
            allow_empty=True, template_object_name='people')
 
+``tagging.views.itagged_object_list``
+------------------------------------
+
+**Description:**
+
+A view that displays a list of objects for a given model which have a
+given tag.
+Behaves exactly as tagged_object_list with the distinction that the tags
+are searched case insensitive.
 
 Template tags
 =============
